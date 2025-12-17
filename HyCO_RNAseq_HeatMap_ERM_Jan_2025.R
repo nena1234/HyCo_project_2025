@@ -7,6 +7,80 @@ library(RColorBrewer)
 library(viridis)
 library(ggplot2)
 
+#################### Load the count data ##############################################
+countData <- read.table("/Users/elenarefet-mollof/Desktop/HyCo_Project_RNAseq_analysis/HyCo_RNAseq_analyzed-by-ERM/counts.txt", header = TRUE, row.names = 1, sep = "\t", skip = 1)
+countData <- countData[ , -(1:5)]
+
+sampleNames <- colnames(countData)
+conditions <- ifelse(grepl("HyCo", sampleNames), "HyCo", "Normoxic")
+cellTypes <- ifelse(grepl("SK.LMS.1", sampleNames), "SK-LMS-1", "STS117")
+colData <- DataFrame(condition = factor(conditions), cell_type = factor(cellTypes))
+rownames(colData) <- sampleNames
+print(colData)
+
+
+dds <- DESeqDataSetFromMatrix(
+  countData = countData,
+  colData = colData,
+  design = ~ cell_type + condition
+)
+
+dds <- DESeq(dds)
+
+results <- results(dds, contrast = c("condition", "HyCo", "Normoxic"))
+
+dds_SK_LMS_1 <- dds[, dds$cell_type == "SK-LMS-1"]
+dds_STS117 <- dds[, dds$cell_type == "STS117"]
+
+dds_SK_LMS_1$condition <- factor(dds_SK_LMS_1$condition, levels = c("Normoxic", "HyCo"))
+design(dds_SK_LMS_1) <- ~ condition
+dds_SK_LMS_1 <- DESeq(dds_SK_LMS_1)
+
+dds_STS117$condition <- factor(dds_STS117$condition, levels = c("Normoxic", "HyCo"))
+design(dds_STS117) <- ~ condition
+dds_STS117 <- DESeq(dds_STS117)
+
+
+
+
+############### removing STS117 N4 #############################################
+
+# Remove samples
+countData_No_STS117_N4 <- countData[, grepl("STS117", colnames(countData))]
+
+countData_No_STS117_N4 <- countData_No_STS117_N4[, !(colnames(countData_No_STS117_N4) %in% c("Output.STS117.N4.HyCo_2.3439654_S2_L001_sorted.bam", "Output.STS117.N4.S.Norm_2.3439655_S3_L001_sorted.bam"))]
+
+# Verify removal
+sampleNames_No_STS117_N4 <- colnames(countData_No_STS117_N4)
+
+conditions_No_STS117_N4 <- ifelse(grepl("HyCo", sampleNames_No_STS117_N4), "HyCo", "Normoxic")
+cellTypes_No_STS117_N4 <- ifelse(grepl("STS117", sampleNames_No_STS117_N4), "STS117", NA)
+
+# Remove NA values to keep only valid samples
+valid_samples <- !is.na(cellTypes_No_STS117_N4)
+sampleNames_No_STS117_N4 <- sampleNames_No_STS117_N4[valid_samples]
+conditions_No_STS117_N4 <- conditions_No_STS117_N4[valid_samples]
+cellTypes_No_STS117_N4 <- cellTypes_No_STS117_N4[valid_samples]
+
+
+colData_No_STS117_N4 <- DataFrame(
+  conditionNoN4 = factor(conditions_No_STS117_N4, levels = c("Normoxic", "HyCo")),
+  cell_typeNoN4 = factor(cellTypes_No_STS117_N4)
+)
+rownames(colData_No_STS117_N4) <- sampleNames_No_STS117_N4  # Assign row names
+
+
+dds_STS117_No_N4 <- DESeqDataSetFromMatrix(
+  countData = countData_No_STS117_N4,
+  colData = colData_No_STS117_N4,
+  design = ~ conditionNoN4
+)
+
+
+
+# Run DESeq
+dds_STS117_No_N4 <- DESeq(dds_STS117_No_N4)
+
 
 ########################## SK-LMS-1 ############################################
 

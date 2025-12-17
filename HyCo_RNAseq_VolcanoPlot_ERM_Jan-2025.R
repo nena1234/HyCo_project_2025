@@ -3,8 +3,8 @@
 library(DESeq2)
 library(EnhancedVolcano)
 
-# Step 1: load the count data
-countData <- read.table("/Users/elenarefet-mollof/Desktop/HyCo_Project_RNAseq_analysis/HyCo_RNAseq_analyzed-by-ERM/counts.txt", header = TRUE, row.names = 1, sep = "\t", skip = 1)
+# Load the count data
+countData <- read.table("...counts.txt", header = TRUE, row.names = 1, sep = "\t", skip = 1)
 countData <- countData[ , -(1:5)]
 
 sampleNames <- colnames(countData)
@@ -71,10 +71,10 @@ dds_SK_LMS_1_No_STS117_N4 <- DESeq(dds_SK_LMS_1_No_STS117_N4)
 results_SK_LMS_1_No_STS117_N4 <- results(dds_SK_LMS_1_No_STS117_N4, contrast = c("condition", "HyCo", "Normoxic"))
 results_SK_LMS_1_No_STS117_N4 <- results_SK_LMS_1_No_STS117_N4[!is.na(results_SK_LMS_1_No_STS117_N4$log2FoldChange) & !is.na(results_SK_LMS_1_No_STS117_N4$pvalue),]
 
-################################ Volcano Plot ##################################
+################################ Volcano Plot SK-LMS-1 and STS117 combined ##################################
 
 library(EnhancedVolcano)
-library(ggplot2)  # Ensure ggplot2 is loaded
+library(ggplot2)  
 
 EnhancedVolcano(results_SK_LMS_1_No_STS117_N4,
                 lab = rownames(results_SK_LMS_1_No_STS117_N4),
@@ -114,9 +114,9 @@ EnhancedVolcano(results_SK_LMS_1_No_STS117_N4,
                 
                 legendLabels = c(
                   "Not Significant",
-                  expression(Log[2] ~ "Fold Change"),
-                  expression(paste("p-value < ", 10^-6)),
-                  expression(paste("p-value < ", 10^-6, " & ", Log[2], " Fold Change < 0.5"))
+                  expression(Log[2] ~ "Fold Change > 0.5"),
+                  expression(paste("p-value < ", 10^-5)),
+                  expression(paste("p-value < ", 10^-5, " & ", Log[2], " Fold Change > 0.5"))
                 ),
                 
                 
@@ -140,7 +140,7 @@ EnhancedVolcano(results_SK_LMS_1_No_STS117_N4,
 
 
 
-################################ Volcano Plot ##################################
+################################ Volcano Plot SK-LMS-1 ##################################
 
 library(EnhancedVolcano)
 EnhancedVolcano(results_SK_LMS_1,
@@ -181,9 +181,9 @@ EnhancedVolcano(results_SK_LMS_1,
                 
                 legendLabels = c(
                   "Not Significant",
-                  expression(Log[2] ~ "Fold Change"),
-                  expression(paste("p-value < ", 10^-6)),
-                  expression(paste("p-value < ", 10^-6, " & ", Log[2], " Fold Change < 0.5"))
+                  expression(Log[2] ~ "Fold Change > 0.5"),
+                  expression(paste("p-value < ", 10^-5)),
+                  expression(paste("p-value < ", 10^-5, " & ", Log[2], " Fold Change > 0.5"))
                 ),
                 
                 
@@ -204,29 +204,9 @@ EnhancedVolcano(results_SK_LMS_1,
                 widthConnectors = 1,
                 colConnectors = 'grey30',
                 max.overlap=10)      # Controls how many overlapping labels are allowed
-         
 
 
-EnhancedVolcano(results_STS117,
-                lab = rownames(results_STS117),
-                x = 'log2FoldChange',
-                y = 'pvalue',
-                title = "STS117",
-                xlab = bquote(~Log[2]~ 'fold change'),
-                pCutoff = 10e-6,
-                FCcutoff = 0.5,
-                labSize = 3.0,
-                labCol = 'black',
-                labFace = 'bold',
-                boxedLabels = TRUE,
-                colAlpha = 4/5,
-                legendPosition = 'right',
-                legendLabSize = 14,
-                legendIconSize = 4.0,
-                drawConnectors = TRUE,
-                widthConnectors = 0.5,
-                colConnectors = 'black')
-
+################################ Volcano Plot STS117 ##################################
 ############### removing STS117 N4 #############################################
 
 # Remove samples
@@ -270,58 +250,6 @@ dds_STS117_No_N4 <- DESeq(dds_STS117_No_N4)
 results_STS117_No_N4 <- results(dds_STS117_No_N4  , contrast = c("conditionNoN4", "HyCo", "Normoxic"))
 results_STS117_No_N4 <- results_STS117_No_N4[!is.na(results_STS117_No_N4$log2FoldChange) & !is.na(results_STS117_No_N4$pvalue),]
 
-
-EnhancedVolcano(results_STS117_No_N4,
-                lab = rownames(results_STS117_No_N4),
-                x = 'log2FoldChange',
-                y = 'pvalue',
-                title = "STS117",
-                xlab = bquote(~Log[2]~ 'fold change'),
-                pCutoff = 10e-6,
-                FCcutoff = 0.5,
-                # Title size
-                titleLabSize = 44,
-                #to remove the Enhanced Volcano watermark
-                subtitle = "", 
-                
-                # Legend size
-                legendLabSize = 36,
-                legendIconSize = 18,
-                
-                # Axis labels size
-                axisLabSize = 40,
-                
-                # Thickness of axes
-                borderWidth = 3.5,          # Border thickness around the plot
-                
-                # Adjusting point size and shape
-                pointSize = 6,            # Size of points (dots)
-                shape = 16,                 # Shape of points (e.g., 21 = circle, 22 = square)
-                
-                
-                # Grid lines
-                gridlines.major = TRUE,
-                gridlines.minor = FALSE,
-                
-                # Custom colors for points
-                col = c('grey50', 'lightpink1', 'darkorange1', 'red3'),
-                # Order of colors: 
-                # 1 = NS (not significant), 
-                # 2 = log2FC significant only, 
-                # 3 = p-value significant only, 
-                # 4 = both significant
-                labSize = 10.0,
-                labCol = 'grey30',
-                labFace = 'bold',
-                boxedLabels = TRUE,
-                colAlpha = 4/5,
-                legendPosition = 'right',
-                drawConnectors = TRUE,
-                widthConnectors = 1,
-                colConnectors = 'grey30',
-                max.overlap=10)            # Controls how many overlapping labels are allowed
-
-
 EnhancedVolcano(results_STS117_No_N4,
                 lab = rownames(results_STS117_No_N4),
                 x = 'log2FoldChange',
@@ -360,11 +288,10 @@ EnhancedVolcano(results_STS117_No_N4,
                 
                 legendLabels = c(
                   "Not Significant",
-                  expression(Log[2] ~ "Fold Change"),
-                  expression(paste("p-value < ", 10^-6)),
-                  expression(paste("p-value < ", 10^-6, " & ", Log[2], " Fold Change < 0.5"))
+                  expression(Log[2] ~ "Fold Change > 0.5"),
+                  expression(paste("p-value < ", 10^-5)),
+                  expression(paste("p-value < ", 10^-5, " & ", Log[2], " Fold Change > 0.5"))
                 ),
-                
                 
                 #legendPosition = 'top',  # Move legend
                 #legendLabSize = 12 ,  

@@ -1,0 +1,100 @@
+library(dplyr)
+library(survival)
+library(readxl)
+library(ggplot2)
+library(forestplot)
+library(forestploter)
+
+###### Loading TPM T2 file from SARC032 cohort : RNAseq Data post treatment
+
+TPM_T1 <- read.delim("...SARC032_tpm_T1only.txt", 
+                     row.names = 1, check.names = FALSE)
+TPM_T2 <- read.delim("...SARC032_tpm_T2only.txt", 
+                     row.names = 1, check.names = FALSE)
+
+###### Loading patients outcome
+clinical <- read_excel("...SARC032_clinical_outcome.xlsx", sheet = 1)
+
+src_lookup <- c(
+  "803-072"="SRC83",  "001-074"="SRC82",  "022-059"="SRC75",  "004-058"="SRC74",
+  "004-045"="SRC68",  "022-046"="SRC67",  "022-044"="SRC66",  "001-041"="SRC65",
+  "092-037"="SRC64",  "004-040"="SRC63",  "005-027"="SRC55",  "803-029"="SRC54",
+  "802-103"="SRC535", "802-149"="SRC532", "802-148"="SRC531", "005-135"="SRC530",
+  "091-018"="SRC53",  "076-102"="SRC529", "076-146"="SRC527", "801-151"="SRC523",
+  "802-132"="SRC521", "802-120"="SRC520", "001-023"="SRC52",  "022-025"="SRC51",
+  "022-026"="SRC50",  "029-021"="SRC48",  "005-015"="SRC47",  "004-107"="SRC464",
+  "004-112"="SRC463", "001-134"="SRC462", "005-147"="SRC461", "029-020"="SRC46",
+  "801-129"="SRC459", "802-117"="SRC458", "802-122"="SRC457", "092-144"="SRC456",
+  "802-108"="SRC454", "802-138"="SRC452", "098-155"="SRC450", "048-016"="SRC45",
+  "801-141"="SRC449", "092-140"="SRC447", "001-017"="SRC44",  "005-013"="SRC42",
+  "071-009"="SRC40",  "091-010"="SRC39",  "022-012"="SRC38",  "001-131"="SRC364",
+  "092-124"="SRC362", "091-006"="SRC36",  "015-002"="SRC35",  "001-004"="SRC34",
+  "071-003"="SRC33",  "801-042"="SRC279","051-094"="SRC278","051-087"="SRC276",
+  "802-086"="SRC275","802-019"="SRC274","802-051"="SRC273","802-050"="SRC271",
+  "802-063"="SRC269","802-062"="SRC267","802-071"="SRC265","802-081"="SRC264",
+  "802-075"="SRC263","802-080"="SRC261","802-085"="SRC260","801-097"="SRC258",
+  "802-056"="SRC256","802-096"="SRC255","802-070"="SRC254","016-098"="SRC251",
+  "051-092"="SRC250","005-109"="SRC248","016-114"="SRC247","004-110"="SRC246",
+  "016-104"="SRC245","004-090"="SRC221","016-095"="SRC220","002-083"="SRC217",
+  "005-111"=NA_character_,"016-043"=NA_character_,
+  "022-152"="SRC526","802-100"="SRC455","092-142"="SRC451","001-014"="SRC43",
+  "001-128"="SRC365","802-078"="SRC262","022-105"="SRC244","001-076"="SRC84",
+  "803-069"="SRC81","001-066"="SRC80","001-038"="SRC62","015-028"="SRC56",
+  "802-143"="SRC533","076-068"="SRC528","802-150"="SRC524","048-022"="SRC49",
+  "034-137"="SRC374","092-126"="SRC363","022-127"="SRC361","048-119"="SRC360",
+  "802-052"="SRC268","001-115"="SRC259","001-089"="SRC219","071-073"="SRC79",
+  "001-067"="SRC78","092-049"="SRC73","091-055"="SRC72","071-034"="SRC60",
+  "029-033"="SRC59","022-032"="SRC58","001-030"="SRC57","802-139"="SRC536",
+  "802-153"="SRC534","802-121"="SRC522","802-130"="SRC453","005-007"="SRC41",
+  "092-008"="SRC37","801-088"="SRC277","051-057"="SRC272","051-060"="SRC270",
+  "051-077"="SRC266","016-116"="SRC257","802-079"="SRC253","001-101"="SRC223",
+  "029-099"="SRC222"
+)
+# Removing the "_T1" to each column name to match with the IDs
+colnames(TPM_T1) <- sub("_T1$", "", colnames(TPM_T1))
+colnames(TPM_T2) <- sub("_T2$", "", colnames(TPM_T2))
+
+P4HA1_T1 <- as.numeric(TPM_T1["P4HA1", ])
+P4HA1_T2 <- as.numeric(TPM_T2["P4HA1", ])
+P4HA1_combined <- c(P4HA1_T1, P4HA1_T2)
+
+threshold <- quantile(P4HA1_combined, 0.5, na.rm = TRUE)
+
+# Replace Patient ID to SRC ID in clinical outcome table
+clinical$Patient <- src_lookup[clinical$Patient]
+
+# Removing the excluded patients : NA in both sarcoma immune class and sarcoma ecotype assignment
+clinical_filtered <- clinical %>%
+ dplyr::filter(!(`Sarcoma Immune Class`=="NA" & `Sarcoma Ecotype Assignment`=="NA"))
+
+
+# Extract T1 patients for KM analysis
+
+# Combine with patient IDs
+P4HA1_expression_T1 <- data.frame(
+  Patient = colnames(TPM_T1),
+  TPM = P4HA1_T1
+)
+
+# Assigning  High or Low using the combined median
+P4HA1_expression_T1$Group <- ifelse(P4HA1_expression_T1$TPM > threshold, "High", "Low")
+
+# Combine with clinical data
+
+df <- merge(clinical_filtered, P4HA1_expression_T1, by = "Patient")
+
+df$Group <- paste(df$Group, df$`Treatment Arm`, sep = "_")
+
+groups <- c("Low_Control", "High_Control", "Low_Experimental", "High_Experimental")
+
+output <- lapply(groups, function(g) subset(df, Group==g)[, c("DFS Time (Days)","DFS Event")])
+names(output) <- groups
+
+# Export for Prism
+write.table(output$Low_Control, "Low_Control.txt", sep="\t", row.names=FALSE)
+write.table(output$High_Control, "High_Control.txt", sep="\t", row.names=FALSE)
+write.table(output$Low_Experimental, "Low_Experimental.txt", sep="\t", row.names=FALSE)
+write.table(output$High_Experimental, "High_Experimental.txt", sep="\t", row.names=FALSE)
+
+
+
